@@ -51,6 +51,30 @@ class User extends Authenticatable
     }
 
     /**
+     * Append these attributes to the model's array/JSON form.
+     *
+     * @var array<int, string>
+     */
+    protected $appends = ['name', 'badges'];
+
+    /**
+     * Get the name attribute (alias for full_name).
+     */
+    public function getNameAttribute(): string
+    {
+        return $this->full_name;
+    }
+
+    /**
+     * Get the badges attribute (placeholder - implement badge logic later).
+     */
+    public function getBadgesAttribute(): array
+    {
+        // TODO: Implement actual badge logic based on user achievements
+        return [];
+    }
+
+    /**
      * Get the courses created by this user.
      */
     public function createdCourses(): HasMany

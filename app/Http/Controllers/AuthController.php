@@ -13,44 +13,43 @@ use Illuminate\Validation\ValidationException;
 class AuthController extends Controller
 {
     /**
-     * Register a new user.
+     * Register a new user (SPA cookie-based authentication).
      */
     public function register(Request $request): JsonResponse
     {
         $request->validate([
-            'full_name' => 'required|string|max:255',
+            'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => ['required', 'confirmed', Password::defaults()],
-            'role' => 'sometimes|in:student,graduate',
+            'role' => 'sometimes|in:student,teacher',
         ]);
 
-        // Prevent self-registration as Teacher/Admin
-        if (in_array($request->role, ['teacher', 'admin'])) {
+        // Prevent self-registration as Admin
+        if ($request->role === 'admin') {
             return response()->json([
-                'error' => true,
-                'message' => 'Forbidden',
-                'code' => 403
+                'message' => 'Cannot self-register as admin',
             ], 403);
         }
 
         $user = User::create([
-            'full_name' => $request->full_name,
+            'full_name' => $request->name, // Map 'name' to 'full_name'
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => $request->role ?? 'student',
         ]);
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+        // Log the user in (creates session)
+        Auth::login($user);
 
         return response()->json([
-            'user' => $user,
-            'token' => $token,
-            'token_type' => 'Bearer',
+            'data' => [
+                'user' => $user,
+            ],
         ], 201);
     }
 
     /**
-     * Login user and create token.
+     * Login user (SPA cookie-based authentication).
      */
     public function login(Request $request): JsonResponse
     {
@@ -61,28 +60,27 @@ class AuthController extends Controller
 
         if (!Auth::attempt($request->only('email', 'password'))) {
             return response()->json([
-                'error' => true,
-                'message' => 'Unauthorized',
-                'code' => 401
+                'message' => 'Invalid credentials',
             ], 401);
         }
 
-        $user = User::where('email', $request->email)->firstOrFail();
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $user = Auth::user();
 
         return response()->json([
-            'user' => $user,
-            'token' => $token,
-            'token_type' => 'Bearer',
+            'data' => [
+                'user' => $user,
+            ],
         ]);
     }
 
     /**
-     * Logout user (revoke token).
+     * Logout user (session-based).
      */
     public function logout(Request $request): JsonResponse
     {
-        $request->user()->currentAccessToken()->delete();
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return response()->json([
             'message' => 'Successfully logged out',
@@ -95,7 +93,7 @@ class AuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         return response()->json([
-            'user' => $request->user(),
+            'data' => $request->user(),
         ]);
     }
 }
