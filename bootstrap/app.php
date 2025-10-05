@@ -15,6 +15,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(prepend: [
             \Illuminate\Http\Middleware\HandleCors::class,
         ]);
+
+        // Enable sessions for API routes (required for Sanctum SPA)
+        $middleware->statefulApi();
         
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckRole::class,
