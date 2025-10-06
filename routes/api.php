@@ -42,6 +42,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/lessons/{lesson}/approve', [\App\Http\Controllers\LessonController::class, 'approve']);
     
     // Materials routes
+    Route::get('/lessons/{lesson}/materials', [\App\Http\Controllers\MaterialController::class, 'getByLesson']);
     Route::post('/lessons/{lesson}/materials', [\App\Http\Controllers\MaterialController::class, 'store']);
     Route::get('/materials/{material}/download', [\App\Http\Controllers\MaterialController::class, 'download']);
     Route::delete('/materials/{material}', [\App\Http\Controllers\MaterialController::class, 'destroy']);
@@ -55,12 +56,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/questions/{question}/comments', [\App\Http\Controllers\CommentController::class, 'storeForQuestion']);
     
     // Comments routes
+    Route::get('/lessons/{lesson}/comments', [\App\Http\Controllers\CommentController::class, 'getByLesson']);
     Route::post('/lessons/{lesson}/comments', [\App\Http\Controllers\CommentController::class, 'storeForLesson']);
+    Route::get('/questions/{question}/comments', [\App\Http\Controllers\CommentController::class, 'getByQuestion']);
     Route::get('/comments/{comment}', [\App\Http\Controllers\CommentController::class, 'show']);
     Route::put('/comments/{comment}', [\App\Http\Controllers\CommentController::class, 'update']);
     Route::delete('/comments/{comment}', [\App\Http\Controllers\CommentController::class, 'destroy']);
     
     // Ratings routes
+    Route::get('/lessons/{lesson}/ratings', [\App\Http\Controllers\RatingController::class, 'getByLesson']);
     Route::post('/lessons/{lesson}/ratings', [\App\Http\Controllers\RatingController::class, 'store']);
     Route::put('/ratings/{rating}', [\App\Http\Controllers\RatingController::class, 'update']);
     Route::delete('/ratings/{rating}', [\App\Http\Controllers\RatingController::class, 'destroy']);
