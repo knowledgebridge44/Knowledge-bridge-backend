@@ -20,7 +20,29 @@ class LessonPolicy
      */
     public function view(User $user, Lesson $lesson): bool
     {
-        return $user->isEnrolledIn($lesson->course) && $lesson->isApproved();
+        // Allow access if user is enrolled in the course
+        if ($user->isEnrolledIn($lesson->course) && $lesson->isApproved()) {
+            return true;
+        }
+        
+        // Allow access to the first lesson as preview for all users
+        if ($lesson->isApproved()) {
+            $firstLesson = $lesson->course->lessons()
+                ->where('status', 'approved')
+                ->orderBy('created_at', 'asc')
+                ->first();
+            
+            if ($firstLesson && $firstLesson->id === $lesson->id) {
+                return true;
+            }
+        }
+        
+        // Allow course owners and admins to view all lessons
+        if ($user->hasRole('admin') || $lesson->course->created_by === $user->id) {
+            return true;
+        }
+        
+        return false;
     }
 
     /**
