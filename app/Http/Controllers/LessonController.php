@@ -58,13 +58,13 @@ class LessonController extends Controller
     {
         Gate::authorize('view', $lesson);
 
+        $lesson->load([
+            'uploader:id,full_name',
+            'materials',
+        ]);
+
         return response()->json([
-            'lesson' => $lesson->load([
-                'uploader:id,full_name',
-                'materials',
-                'comments.user:id,full_name',
-                'ratings.user:id,full_name'
-            ]),
+            'data' => $lesson,
         ]);
     }
 
