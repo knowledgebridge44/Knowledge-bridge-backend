@@ -13,6 +13,27 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 class MaterialController extends Controller
 {
     /**
+     * Get all materials for a lesson.
+     */
+    public function getByLesson(Lesson $lesson): JsonResponse
+    {
+        $materials = $lesson->materials()
+            ->with('uploader:id,full_name')
+            ->get();
+
+        // Map fields for frontend
+        $materials->transform(function ($material) {
+            $material->title = $material->file_name;
+            $material->description = $material->description ?? '';
+            return $material;
+        });
+
+        return response()->json([
+            'data' => $materials,
+        ]);
+    }
+
+    /**
      * Store a newly created material.
      */
     public function store(Request $request, Lesson $lesson): JsonResponse

@@ -12,6 +12,48 @@ use Illuminate\Support\Facades\Gate;
 class CommentController extends Controller
 {
     /**
+     * Get all comments for a lesson.
+     */
+    public function getByLesson(Lesson $lesson): JsonResponse
+    {
+        $comments = $lesson->comments()
+            ->with('user:id,full_name')
+            ->latest()
+            ->get();
+
+        // Map full_name to name for frontend
+        $comments->transform(function ($comment) {
+            $comment->user->name = $comment->user->full_name;
+            return $comment;
+        });
+
+        return response()->json([
+            'data' => $comments,
+        ]);
+    }
+
+    /**
+     * Get all comments for a question.
+     */
+    public function getByQuestion(Question $question): JsonResponse
+    {
+        $comments = $question->comments()
+            ->with('user:id,full_name')
+            ->latest()
+            ->get();
+
+        // Map full_name to name for frontend
+        $comments->transform(function ($comment) {
+            $comment->user->name = $comment->user->full_name;
+            return $comment;
+        });
+
+        return response()->json([
+            'data' => $comments,
+        ]);
+    }
+
+    /**
      * Store a comment for a lesson.
      */
     public function storeForLesson(Request $request, Lesson $lesson): JsonResponse
@@ -30,8 +72,11 @@ class CommentController extends Controller
             'content' => $request->content,
         ]);
 
+        $comment->load(['user:id,full_name', 'parent.user:id,full_name']);
+        $comment->user->name = $comment->user->full_name;
+
         return response()->json([
-            'comment' => $comment->load(['user:id,full_name', 'parent.user:id,full_name']),
+            'data' => $comment,
         ], 201);
     }
 
@@ -54,8 +99,11 @@ class CommentController extends Controller
             'content' => $request->content,
         ]);
 
+        $comment->load(['user:id,full_name', 'parent.user:id,full_name']);
+        $comment->user->name = $comment->user->full_name;
+
         return response()->json([
-            'comment' => $comment->load(['user:id,full_name', 'parent.user:id,full_name']),
+            'data' => $comment,
         ], 201);
     }
 
@@ -66,12 +114,15 @@ class CommentController extends Controller
     {
         Gate::authorize('view', $comment);
 
+        $comment->load([
+            'user:id,full_name',
+            'parent.user:id,full_name',
+            'replies.user:id,full_name'
+        ]);
+        $comment->user->name = $comment->user->full_name;
+
         return response()->json([
-            'comment' => $comment->load([
-                'user:id,full_name',
-                'parent.user:id,full_name',
-                'replies.user:id,full_name'
-            ]),
+            'data' => $comment,
         ]);
     }
 
@@ -90,8 +141,11 @@ class CommentController extends Controller
             'content' => $request->content,
         ]);
 
+        $comment->load('user:id,full_name');
+        $comment->user->name = $comment->user->full_name;
+
         return response()->json([
-            'comment' => $comment->load('user:id,full_name'),
+            'data' => $comment,
         ]);
     }
 

@@ -13,18 +13,35 @@ class QuestionController extends Controller
     /**
      * Display a listing of questions.
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         Gate::authorize('viewAny', Question::class);
 
+        $perPage = $request->get('per_page', 20);
         $questions = Question::with([
             'user:id,full_name',
-            'lesson:id,title',
-            'comments.user:id,full_name'
-        ])->latest()->get();
+            'lesson:id,title'
+        ])
+        ->withCount('comments')
+        ->latest()
+        ->paginate($perPage);
+
+        // Map question_text to title and content for frontend
+        $questions->getCollection()->transform(function ($question) {
+            $question->title = $question->question_text;
+            $question->content = $question->question_text;
+            $question->user->name = $question->user->full_name;
+            return $question;
+        });
 
         return response()->json([
-            'questions' => $questions,
+            'data' => $questions->items(),
+            'meta' => [
+                'current_page' => $questions->currentPage(),
+                'last_page' => $questions->lastPage(),
+                'per_page' => $questions->perPage(),
+                'total' => $questions->total(),
+            ],
         ]);
     }
 
@@ -34,7 +51,8 @@ class QuestionController extends Controller
     public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'question_text' => 'required|string',
+            'title' => 'required|string',
+            'content' => 'required|string',
             'lesson_id' => 'sometimes|exists:lessons,id',
         ]);
 
@@ -45,14 +63,22 @@ class QuestionController extends Controller
 
         Gate::authorize('create', [Question::class, $lesson]);
 
+        // Combine title and content into question_text
+        $questionText = $request->title . "\n\n" . $request->content;
+
         $question = Question::create([
             'user_id' => $request->user()->id,
             'lesson_id' => $request->lesson_id,
-            'question_text' => $request->question_text,
+            'question_text' => $questionText,
         ]);
 
+        $question->load(['user:id,full_name', 'lesson:id,title']);
+        $question->title = $request->title;
+        $question->content = $request->content;
+        $question->user->name = $question->user->full_name;
+
         return response()->json([
-            'question' => $question->load(['user:id,full_name', 'lesson:id,title']),
+            'data' => $question,
         ], 201);
     }
 
@@ -63,13 +89,17 @@ class QuestionController extends Controller
     {
         Gate::authorize('view', $question);
 
+        $question->load([
+            'user:id,full_name',
+            'lesson:id,title'
+        ]);
+
+        $question->title = $question->question_text;
+        $question->content = $question->question_text;
+        $question->user->name = $question->user->full_name;
+
         return response()->json([
-            'question' => $question->load([
-                'user:id,full_name',
-                'lesson:id,title',
-                'comments.user:id,full_name',
-                'comments.replies.user:id,full_name'
-            ]),
+            'data' => $question,
         ]);
     }
 
@@ -81,15 +111,28 @@ class QuestionController extends Controller
         Gate::authorize('update', $question);
 
         $request->validate([
-            'question_text' => 'required|string',
+            'title' => 'sometimes|required|string',
+            'content' => 'sometimes|required|string',
         ]);
+
+        // Combine title and content if both provided
+        if ($request->has('title') && $request->has('content')) {
+            $questionText = $request->title . "\n\n" . $request->content;
+        } else {
+            $questionText = $request->title ?? $request->content ?? $question->question_text;
+        }
 
         $question->update([
-            'question_text' => $request->question_text,
+            'question_text' => $questionText,
         ]);
 
+        $question->load(['user:id,full_name', 'lesson:id,title']);
+        $question->title = $request->title ?? $question->question_text;
+        $question->content = $request->content ?? $question->question_text;
+        $question->user->name = $question->user->full_name;
+
         return response()->json([
-            'question' => $question->load(['user:id,full_name', 'lesson:id,title']),
+            'data' => $question,
         ]);
     }
 
