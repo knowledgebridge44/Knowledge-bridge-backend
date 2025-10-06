@@ -61,7 +61,14 @@ class LessonController extends Controller
         $lesson->load([
             'uploader:id,full_name',
             'materials',
+            'course:id,title,created_by',
         ]);
+
+        // Add enrollment status for authenticated user
+        if ($user = request()->user()) {
+            $isEnrolled = $lesson->course->enrollments()->where('user_id', $user->id)->exists();
+            $lesson->course->enrolled = $isEnrolled;
+        }
 
         return response()->json([
             'data' => $lesson,
