@@ -18,9 +18,8 @@ class Course extends Model
         'created_by',
     ];
 
-    // Don't auto-append these - they'll be added manually when needed
-    // to avoid N+1 queries
-    protected $appends = [];
+    // Append teacher_id and teacher for frontend compatibility
+    protected $appends = ['teacher_id', 'teacher'];
 
     /**
      * Get the user who created this course.
@@ -96,5 +95,21 @@ class Course extends Model
             ->withCount('ratings')
             ->get()
             ->sum('ratings_count');
+    }
+
+    /**
+     * Get the teacher_id attribute (alias for created_by).
+     */
+    public function getTeacherIdAttribute()
+    {
+        return $this->created_by;
+    }
+
+    /**
+     * Get the teacher attribute (alias for creator relationship).
+     */
+    public function getTeacherAttribute()
+    {
+        return $this->creator;
     }
 }

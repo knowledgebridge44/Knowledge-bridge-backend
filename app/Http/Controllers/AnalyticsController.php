@@ -23,7 +23,19 @@ class AnalyticsController extends Controller
             ->orderByDesc(DB::raw('ratings_count + comments_count'))
             ->with(['course:id,title', 'uploader:id,full_name'])
             ->limit(10)
-            ->get();
+            ->get()
+            ->map(function ($lesson) {
+                // Calculate average rating for this lesson
+                $avgRating = $lesson->ratings()->avg('rating_value') ?: 0;
+                
+                return [
+                    'lesson_id' => $lesson->id,
+                    'lesson_title' => $lesson->title,
+                    'views' => $lesson->ratings_count + $lesson->comments_count, // engagement metric
+                    'average_rating' => round($avgRating, 1),
+                    'course_title' => $lesson->course?->title ?? 'N/A',
+                ];
+            });
 
         return response()->json([
             'most_viewed_lessons' => $lessons,
@@ -33,28 +45,45 @@ class AnalyticsController extends Controller
     /**
      * Get student activity metrics (Admin only).
      */
-    public function studentActivity(): JsonResponse
+    public function studentActivity(Request $request): JsonResponse
     {
-        $studentActivity = User::where('role', 'student')
-            ->orWhere('role', 'graduate')
-            ->withCount(['questions', 'comments', 'ratings', 'enrolledCourses'])
-            ->orderByDesc('questions_count')
-            ->get();
-
-        $totalStudents = User::whereIn('role', ['student', 'graduate'])->count();
-        $activeStudents = User::whereIn('role', ['student', 'graduate'])
-            ->where(function ($query) {
-                $query->has('questions')
-                    ->orHas('comments')
-                    ->orHas('ratings');
-            })
-            ->count();
-
+        $days = $request->input('days', 30);
+        
+        // Generate time-series data for the last N days
+        $activityData = [];
+        $startDate = now()->subDays($days);
+        
+        for ($i = 0; $i < $days; $i++) {
+            $date = $startDate->copy()->addDays($i);
+            $dateStr = $date->format('Y-m-d');
+            
+            // Count active students (those who created questions, comments, or ratings on this day)
+            $activeStudents = User::where('role', 'student')
+                ->where(function ($query) use ($dateStr) {
+                    $query->whereHas('questions', function ($q) use ($dateStr) {
+                        $q->whereDate('created_at', $dateStr);
+                    })
+                    ->orWhereHas('comments', function ($q) use ($dateStr) {
+                        $q->whereDate('created_at', $dateStr);
+                    })
+                    ->orWhereHas('ratings', function ($q) use ($dateStr) {
+                        $q->whereDate('created_at', $dateStr);
+                    });
+                })
+                ->count();
+            
+            // Count new enrollments on this day
+            $enrollments = \App\Models\Enrollment::whereDate('created_at', $dateStr)->count();
+            
+            $activityData[] = [
+                'date' => $date->format('M d'),
+                'active_students' => $activeStudents,
+                'enrollments' => $enrollments,
+            ];
+        }
+        
         return response()->json([
-            'student_activity' => $studentActivity,
-            'total_students' => $totalStudents,
-            'active_students' => $activeStudents,
-            'activity_rate' => $totalStudents > 0 ? round(($activeStudents / $totalStudents) * 100, 2) : 0,
+            'student_activity' => $activityData,
         ]);
     }
 
@@ -93,6 +122,9 @@ class AnalyticsController extends Controller
     {
         $stats = [
             'total_users' => User::count(),
+            'total_students' => User::where('role', 'student')->count(),
+            'total_teachers' => User::where('role', 'teacher')->count(),
+            'total_admins' => User::where('role', 'admin')->count(),
             'total_courses' => \App\Models\Course::count(),
             'total_lessons' => Lesson::count(),
             'approved_lessons' => Lesson::where('status', 'approved')->count(),

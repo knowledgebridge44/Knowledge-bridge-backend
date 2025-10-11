@@ -34,6 +34,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/courses/{course}', [\App\Http\Controllers\CourseController::class, 'destroy']);
     
     // Lessons routes
+    Route::get('/lessons', [\App\Http\Controllers\LessonController::class, 'all']); // Admin: get all lessons with filtering
     Route::get('/courses/{course}/lessons', [\App\Http\Controllers\LessonController::class, 'index']);
     Route::post('/courses/{course}/lessons', [\App\Http\Controllers\LessonController::class, 'store']);
     Route::get('/lessons/{lesson}', [\App\Http\Controllers\LessonController::class, 'show']);

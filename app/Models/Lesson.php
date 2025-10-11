@@ -19,6 +19,24 @@ class Lesson extends Model
         'status',
     ];
 
+    protected $appends = ['teacher_id'];
+
+    /**
+     * Get the teacher_id accessor (maps to uploaded_by).
+     */
+    public function getTeacherIdAttribute()
+    {
+        return $this->uploaded_by;
+    }
+
+    /**
+     * Get the teacher accessor (maps to uploader relationship).
+     */
+    public function getTeacherAttribute()
+    {
+        return $this->uploader;
+    }
+
     /**
      * Get the course this lesson belongs to.
      */

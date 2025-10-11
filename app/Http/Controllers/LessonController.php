@@ -11,6 +11,28 @@ use Illuminate\Support\Facades\Gate;
 class LessonController extends Controller
 {
     /**
+     * Get all lessons (admin only, supports filtering).
+     */
+    public function all(Request $request): JsonResponse
+    {
+        // Only admins can view all lessons
+        if ($request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $query = Lesson::with(['course:id,title,created_by', 'uploader:id,full_name']);
+
+        // Filter by status if provided
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $lessons = $query->orderBy('created_at', 'desc')->paginate($request->per_page ?? 20);
+
+        return response()->json($lessons);
+    }
+
+    /**
      * Display lessons for a course.
      */
     public function index(Course $course): JsonResponse
@@ -82,17 +104,13 @@ class LessonController extends Controller
     {
         Gate::authorize('approve', $lesson);
 
-        $request->validate([
-            'status' => 'required|in:approved,rejected',
-        ]);
-
         $lesson->update([
-            'status' => $request->status,
+            'status' => 'approved',
         ]);
 
         return response()->json([
-            'lesson' => $lesson,
-            'message' => "Lesson {$request->status} successfully",
+            'data' => $lesson,
+            'message' => "Lesson approved successfully",
         ]);
     }
 
