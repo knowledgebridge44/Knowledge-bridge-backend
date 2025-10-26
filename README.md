@@ -26,7 +26,7 @@ A comprehensive RESTful API built with **Laravel 12** and **Sanctum** authentica
 
 #### Quick Install (Recommended)
 
-Use the automated installation scripts:
+Use the automated installation scripts (no need to run composer install separately):
 
 **Windows (PowerShell):**
 ```powershell
@@ -40,6 +40,14 @@ cd backend_laravel
 chmod +x install.sh
 ./install.sh
 ```
+
+The script will automatically:
+- ✓ Check for PHP and Composer
+- ✓ Install all dependencies (`composer install`)
+- ✓ Create `.env` file
+- ✓ Generate application key
+- ✓ Create SQLite database
+- ✓ Run migrations and seed test data
 
 #### Manual Installation
 
@@ -90,7 +98,17 @@ The API will be available at `http://localhost:8000/api`
 **Error: "Could not open input file: artisan"**
 - This means you're not in the project root directory
 - Make sure you're in the `backend_laravel` folder (where the `artisan` file is located)
-- Run: `cd backend_laravel` or `cd d:\Projects\knowledge_bridge_Full\knowledge_bridge_frontend\backend_laravel`
+- Run: `cd backend_laravel` or navigate to your project directory
+
+**Error: "Failed to open stream: No such file or directory in artisan"**
+- This means dependencies haven't been installed
+- Run: `composer install` before running any artisan commands
+- Or use the automated installation script which handles this automatically
+
+**Error: "composer: command not found"**
+- Composer is not installed or not in your PATH
+- Download and install from: https://getcomposer.org
+- Windows: Use the installer; Linux/Mac: Follow the installation guide
 
 **Migration Errors:**
 - Ensure the `database/database.sqlite` file exists and has proper permissions

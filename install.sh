@@ -15,7 +15,7 @@ if [ ! -f "./artisan" ]; then
     exit 1
 fi
 
-echo "[1/6] Checking PHP..."
+echo "[1/7] Checking PHP..."
 if command -v php &> /dev/null; then
     echo "PHP is installed: $(php -v | head -n 1)"
 else
@@ -24,7 +24,31 @@ else
 fi
 
 echo ""
-echo "[2/6] Creating .env file..."
+echo "[2/7] Checking Composer..."
+if command -v composer &> /dev/null; then
+    echo "Composer is installed: $(composer --version | head -n 1)"
+else
+    echo "ERROR: Composer is not installed or not in PATH"
+    echo "Please install Composer from https://getcomposer.org"
+    exit 1
+fi
+
+echo ""
+echo "[3/7] Installing dependencies..."
+if [ -d "vendor" ]; then
+    echo "Dependencies already installed, skipping..."
+else
+    echo "Running composer install (this may take a few minutes)..."
+    composer install --no-interaction
+    if [ $? -ne 0 ]; then
+        echo "ERROR: Failed to install dependencies"
+        exit 1
+    fi
+    echo "Dependencies installed successfully"
+fi
+
+echo ""
+echo "[4/7] Creating .env file..."
 if [ -f ".env" ]; then
     echo ".env file already exists, skipping..."
 else
@@ -38,7 +62,7 @@ else
 fi
 
 echo ""
-echo "[3/6] Generating application key..."
+echo "[5/7] Generating application key..."
 php artisan key:generate
 if [ $? -ne 0 ]; then
     echo "ERROR: Failed to generate application key"
@@ -46,7 +70,7 @@ if [ $? -ne 0 ]; then
 fi
 
 echo ""
-echo "[4/6] Creating SQLite database..."
+echo "[6/7] Creating SQLite database..."
 DB_PATH="database/database.sqlite"
 if [ -f "$DB_PATH" ]; then
     echo "Database file already exists"
@@ -56,12 +80,11 @@ else
 fi
 
 echo ""
-echo "[5/6] Setting permissions..."
-chmod -R 775 storage bootstrap/cache
+echo "[7/7] Setting permissions and running migrations..."
+chmod -R 775 storage bootstrap/cache 2>/dev/null || echo "Note: Could not set some permissions (may require sudo)"
 echo "Permissions set for storage and cache directories"
 
-echo ""
-echo "[6/6] Running migrations..."
+echo "Running migrations..."
 php artisan migrate --force
 if [ $? -ne 0 ]; then
     echo "ERROR: Migrations failed"
@@ -69,8 +92,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-echo ""
-echo "[7/7] Seeding database with test data..."
+echo "Seeding database with test data..."
 php artisan db:seed
 if [ $? -ne 0 ]; then
     echo "WARNING: Seeding failed or partially completed"
